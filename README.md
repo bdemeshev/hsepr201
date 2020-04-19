@@ -4,14 +4,19 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of hsepr201 is to ...
+The goal of hsepr201 is to...
+
+> — Всем — два!
+> — И мне?!
+> — И тебе тоже!
+>      Серёжа Ламзин
 
 ## Installation
 
-You can install the released version of hsepr201 from [CRAN](https://CRAN.R-project.org) with:
+You can install the dev version of hsepr201 with:
 
 ``` r
-install.packages("hsepr201")
+devtools::install_github("bdemeshev/hsepr201")
 ```
 
 ## Example
