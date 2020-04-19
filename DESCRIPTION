@@ -16,5 +16,10 @@ Imports:
     rio,
     gh,
     ggplot2,
-    magrittr
+    magrittr,
+    glue,
+    lubridate,
+    stringr,
+    tibble,
+    tidyr
 RoxygenNote: 7.0.2

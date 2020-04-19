@@ -1,0 +1,168 @@
+#' Get students data from google sheets
+#'
+#' Get students data from google sheets
+#'
+#' Get students data from google sheets
+#' @param path filename of csv with student data
+#' @return tibble with useful id data
+get_students_data = function(path) {
+  student = rio::import(path)
+  student = dplyr::select(student, id_for_online, last_name, first_name, middle_name,
+                          group, comment)
+  return(student)
+}
+
+
+#' Get list of git repositories and commits
+#'
+#' Get list of git repositories and commits
+#'
+#' Get list of git repositories and commits
+#' @param path folder name
+#' @return tibble with useful id data
+get_gh_repos = function(path = ".") {
+  commits = tibble::tibble(folder = list.dirs(path, recursive = FALSE))
+  commits = dplyr::mutate(commits, gh_commits = purrr::map(folder, ~get_gh_commits(.)))
+  commits = tidyr::unnest(commits, gh_commits)
+  return(commits)
+}
+
+
+#' Get list of git repository commits
+#'
+#' Get list of git repository commits
+#'
+#' Get list of git repository commits
+#' @param path folder name
+#' @return tibble with useful id data
+get_gh_commits = function(path = ".") {
+  log_format = "%cd\t%cn\t%ce\t%s\t%an\t%h\t%p"
+  # https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History
+  log_options = glue:: glue('--pretty=format:"{log_format}" --date=format:"%Y-%m-%d %H:%M:%S %z"')
+
+  log_cmd = glue::glue('git -C {path} log {log_options}')
+
+  history_logs = system(log_cmd, intern = TRUE) %>%
+    stringr::str_split_fixed("\t", 7) %>%
+    dplyr::as_tibble(.name_repair = "minimal") %>%
+    stats::setNames(c("date", "committer", "mail", "message", "user", "hash", "parent_hash"))
+  return(history_logs)
+}
+
+#' Parse lms filenames
+#'
+#' Parse lms filenames
+#'
+#' Parse lms filenames
+#' @param path folder name
+#' @return tibble with useful id data
+parse_lms_filenames = function(path = ".") {
+  filenames = list.files(path)
+  uploads = tibble::as_tibble(stringr::str_match(filenames, "^([A-Za-z]*)_([A-Za-z]*)_([0-9A-Za-z-]*)_([0-9-]*)"))
+  colnames(uploads) = c("filename", "last_name", "initials", "title", "timedate")
+  uploads = dplyr::mutate(uploads, extension = tools::file_ext(filenames))
+  uploads = dplyr::mutate(uploads, filename = filenames)
+  uploads = dplyr::mutate(uploads, timedate = lubridate::ymd_hms(timedate))
+  return(uploads)
+}
+
+#' Separate grain from chaffs
+#'
+#' The good, the bad and the ugly :)
+#'
+#' Just for information: check whether the submission was unique and with pdf file.
+#' @param uploads tibble with uploads data
+#' @return tibble with good and bad guys
+separate_lms_grain_chaff = function(uploads) {
+  grain_chaff = dplyr::group_by(uploads, last_name, initials) %>%
+    dplyr::summarize(n_uploads = dplyr::n(),
+              last_time = max(timedate), first_time = min(timedate),
+              extension = paste0(extension, collapse = ",")) %>%
+    dplyr::mutate(good = (n_uploads == 1) &
+             (stringr::str_to_lower(extension) == "pdf"))
+  return(grain_chaff)
+}
+
+#' Force unique date
+#'
+#' Force unique date for a vector of timedates
+#'
+#' Force unique date for a vector of timedates.
+#' @param timedate vector with probably different dates
+#' @return timedate vector with unique date forced
+force_unique_date = function(timedate) {
+  dates = unique(lubridate::date(timedate))
+  unique_date = dates[1]
+  if (length(dates) > 1) {
+    warning("Какая-то ересь! Загруженные файлы относятся к разным дням\n",
+            paste0(dates, collapse = " "), "\n",
+            "Была принудительно форсирована дата ", unique_date)
+    lubridate::date(timedate) = unique_date
+  }
+  return(timedate)
+}
+
+#' Get hse lms unique submission
+#'
+#' Get hse lms unique submission
+#'
+#' Get hse lms unique submission
+#' @param uploads tibble with uploads data
+#' @param which either first or last submission is counted
+#' @param start submissions before start are ignored and non counted as first submission
+#' @return tibble with unique submissions
+get_lms_unique_submission = function(uploads,
+                          which = c("first", "last"),
+                          start = "13:00:00") {
+  which = match.arg(which)
+
+  uploads = dplyr::mutate(uploads, timedate = force_unique_date(timedate))
+  unique_date = lubridate::date(uploads$timedate[1])
+
+  start = lubridate::ymd_hms(paste0(unique_date, " ", start))
+
+  early_birds = dplyr::filter(uploads, timedate < start)
+  if (nrow(early_birds) > 0) {
+    warning("Какой-то ахтунг! Есть загруженные файлы раньше времени начала! Игнорируем их.")
+    print(early_birds)
+  }
+
+  uploads = dplyr::filter(uploads, timedate >= start)
+
+  if (which == "first") {
+    unique_submission = dplyr::group_by(uploads, last_name, initials) %>% dplyr::filter(timedate == min(timedate))
+  } else {
+    unique_submission = dplyr::group_by(uploads, last_name, initials) %>% dplyr::filter(timedate == max(timedate))
+  }
+
+  return(unique_submission)
+}
+
+#' Calculate penalties
+#'
+#' Calculate penalties
+#'
+#' Calculate penalties
+#' @param timedate vector of timedates
+#' @param deadline vector of deadlines
+#' @param penalty vectore of penalties (same length as deadline)
+#' @return penalties vector
+calculate_penalty = function(timedate,
+                  deadline = c("13:40:00", "13:45:00", "13:50:00"),
+                  penalty = c(0.3, 0.6, 1)) {
+  submitted = force_unique_date(timedate)
+
+
+  dead_pen = tibble::tibble(deadline = c(deadline, "00:00:00"),
+                            penalty = c(penalty, 0))
+  cross_times = tidyr::crossing(submitted, dead_pen)
+
+  unique_date = lubridate::date(submitted[1])
+  cross_times = dplyr::mutate(cross_times,
+                deadline = lubridate::ymd_hms(paste0(unique_date, " ", deadline)))
+  cross_times = dplyr::filter(cross_times, submitted > deadline)
+  cross_times = cross_times %>% dplyr::group_by(submitted) %>%
+    dplyr::filter(deadline == max(deadline))
+  return(cross_times$penalty)
+}
+
