@@ -21,5 +21,6 @@ Imports:
     lubridate,
     stringr,
     tibble,
-    tidyr
+    tidyr,
+    stringi
 RoxygenNote: 7.0.2

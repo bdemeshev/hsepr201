@@ -5,6 +5,7 @@
 #' Get students data from google sheets
 #' @param path filename of csv with student data
 #' @return tibble with useful id data
+#' @export
 get_students_data = function(path) {
   student = rio::import(path)
   student = dplyr::select(student, id_for_online, last_name, first_name, middle_name,
@@ -20,6 +21,7 @@ get_students_data = function(path) {
 #' Get list of git repositories and commits
 #' @param path folder name
 #' @return tibble with useful id data
+#' @export
 get_gh_repos = function(path = ".") {
   commits = tibble::tibble(folder = list.dirs(path, recursive = FALSE))
   commits = dplyr::mutate(commits, gh_commits = purrr::map(folder, ~get_gh_commits(.)))
@@ -35,6 +37,7 @@ get_gh_repos = function(path = ".") {
 #' Get list of git repository commits
 #' @param path folder name
 #' @return tibble with useful id data
+#' @export
 get_gh_commits = function(path = ".") {
   log_format = "%cd\t%cn\t%ce\t%s\t%an\t%h\t%p"
   # https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History
@@ -56,6 +59,7 @@ get_gh_commits = function(path = ".") {
 #' Parse lms filenames
 #' @param path folder name
 #' @return tibble with useful id data
+#' @export
 parse_lms_filenames = function(path = ".") {
   filenames = list.files(path)
   uploads = tibble::as_tibble(
@@ -75,6 +79,7 @@ parse_lms_filenames = function(path = ".") {
 #' Just for information: check whether the submission was unique and with pdf file.
 #' @param uploads tibble with uploads data
 #' @return tibble with good and bad guys
+#' @export
 separate_lms_grain_chaff = function(uploads) {
   grain_chaff = dplyr::group_by(uploads, last_name, initials) %>%
     dplyr::summarize(n_uploads = dplyr::n(),
@@ -92,6 +97,7 @@ separate_lms_grain_chaff = function(uploads) {
 #' Force unique date for a vector of timedates.
 #' @param timedate vector with probably different dates
 #' @return timedate vector with unique date forced
+#' @export
 force_unique_date = function(timedate) {
   dates = unique(lubridate::date(timedate))
   unique_date = dates[1]
@@ -113,6 +119,7 @@ force_unique_date = function(timedate) {
 #' @param which either first or last submission is counted
 #' @param start submissions before start are ignored and non counted as first submission
 #' @return tibble with unique submissions
+#' @export
 get_lms_unique_submission = function(uploads,
                           which = c("first", "last"),
                           start = "13:00:00") {
@@ -147,8 +154,9 @@ get_lms_unique_submission = function(uploads,
 #' Calculate penalties
 #' @param timedate vector of timedates
 #' @param deadline vector of deadlines
-#' @param penalty vectore of penalties (same length as deadline)
+#' @param penalty vector of penalties (same length as deadline)
 #' @return penalties vector
+#' @export
 calculate_penalty = function(timedate,
                   deadline = c("13:40:00", "13:45:00", "13:50:00"),
                   penalty = c(0.3, 0.6, 1)) {
@@ -167,4 +175,57 @@ calculate_penalty = function(timedate,
     dplyr::filter(deadline == max(deadline))
   return(cross_times$penalty)
 }
+
+
+#' Transliterate cyrillic text
+#'
+#' Transliterate cyrillic text
+#'
+#' Transliterate cyrillic text
+#' @param x cyrillic text
+#' @return transliterated text
+#' @export
+translit = function(x) {
+  return(stringi::stri_trans_general(x, id = "russian-latin/bgn"))
+}
+
+#' Replace yo by ye
+#'
+#' Replace yo by ye
+#'
+#' Replace yo by ye
+#' @param x cyrillic text
+#' @return cyrillic text
+#' @export
+yo2e = function(x) {
+  x = stringr::str_replace_all(x, "Ё", "E")
+  x = stringr::str_replace_all(x, "ё", "е")
+  return(x)
+}
+
+#' Get lms prefix
+#'
+#' Get lms prefix
+#'
+#' Get lms prefix
+#' @param last_name last name in cyrillic
+#' @param first_name first name in cyrillic
+#' @return filename prefix in english
+#' @export
+get_lms_prefix = function(last_name, first_name) {
+  last_name = last_name %>% stringr::str_to_lower() %>% yo2e() %>% translit()
+  first_name = stringr::str_sub(first_name, end = 1) %>%
+    stringr::str_to_lower() %>% yo2e() %>% translit()
+
+  prefix = paste0(last_name, "_", first_name)
+  # simplification in lms
+  prefix = stringr::str_replace_all(prefix, "ʹ", "")
+  prefix = stringr::str_replace_all(prefix, "kh", "h")
+  prefix = stringr::str_replace_all(prefix, "ts", "c")
+  prefix = stringr::str_replace_all(prefix, "·", "")
+  prefix = stringr::str_replace_all(prefix, "ye", "e")
+  prefix = stringr::str_replace_all(prefix, "zh", "j")
+  return(prefix)
+}
+
 

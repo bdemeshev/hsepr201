@@ -15,7 +15,7 @@ calculate_penalty(
 
 \item{deadline}{vector of deadlines}
 
-\item{penalty}{vectore of penalties (same length as deadline)}
+\item{penalty}{vector of penalties (same length as deadline)}
 }
 \value{
 penalties vector
