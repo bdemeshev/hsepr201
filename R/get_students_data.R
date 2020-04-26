@@ -58,7 +58,9 @@ get_gh_commits = function(path = ".") {
 #' @return tibble with useful id data
 parse_lms_filenames = function(path = ".") {
   filenames = list.files(path)
-  uploads = tibble::as_tibble(stringr::str_match(filenames, "^([A-Za-z]*)_([A-Za-z]*)_([0-9A-Za-z-]*)_([0-9-]*)"))
+  uploads = tibble::as_tibble(
+    stringr::str_match(filenames, "^([A-Za-z-]*)_([A-Za-z-]*)_([0-9A-Za-z-]*)_([0-9-]*)"),
+      .name_repair = "unique")
   colnames(uploads) = c("filename", "last_name", "initials", "title", "timedate")
   uploads = dplyr::mutate(uploads, extension = tools::file_ext(filenames))
   uploads = dplyr::mutate(uploads, filename = filenames)
