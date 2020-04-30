@@ -2,6 +2,9 @@
 
 export("%>%")
 export(calculate_penalty)
+export(copy_one_gh_entry)
+export(create_target_fname)
+export(dir_create)
 export(force_unique_date)
 export(get_gh_commits)
 export(get_gh_repos)

@@ -276,3 +276,73 @@ get_stud_id_from_repository = function(path = ".") {
   }
 }
 
+
+
+#' Create target file/folder name from kr, id, time
+#'
+#' Create target file/folder name from kr, id, time
+#'
+#' Create target file/folder name from kr, id, time
+#' @param kr integer kr number
+#' @param time datetime of the submission
+#' @param id student id
+#' @return target file/folder name without extension
+#' @export
+create_target_fname = function(kr, time, id) {
+  hms = hms::as_hms(time)
+  hms = stringr::str_replace_all(hms, ":", "-")
+  fname = glue::glue("gh_kr{kr}_id{id}_{hms}")
+  return(fname)
+}
+
+
+#' Copy one github entry: file or folder
+#'
+#' Copy one github entry: file or folder
+#'
+#' Copy one github entry: file or folder
+#' @param from repository folder
+#' @param to student target folder
+#' @param name name for target file/folder
+#' @param remove file names to exclude
+#' @return nothing, just copy
+#' @export
+copy_one_gh_entry = function(from, to, name,
+                             remove = c("LICENSE", "README.md")) {
+  files = list.files(from)
+  files = files[!(files %in% remove)]
+  if (length(files) == 0) {
+    warning("Nothing to copy!\n Folder: ", from, "\n")
+  }
+  if (length(files) == 1) {
+    # copy file
+    from = paste0(from, "/", files)
+    to = paste0(to, "/", name, ".", tools::file_ext(from))
+    file.copy(from, to)
+  }
+  if (length(files) > 1) {
+    # copy many files
+    to = paste0(to, "/", name, "/")
+    dir.create(to)
+    for (file in files) {
+      file_from = paste0(from, "/", file)
+      file_to = paste0(to, "/", file)
+      file.copy(file_from, file_to)
+    }
+  }
+}
+
+#' Create folder
+#'
+#' Create folder
+#'
+#' Create folder. No warning if the folder already exists.
+#' @param path folder
+#' @return nothing, just create folder
+#' @export
+dir_create = function(path) {
+  if (!dir.exists(path)) {
+    dir.create(path)
+  }
+}
+
