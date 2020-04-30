@@ -2,15 +2,16 @@ Package: hsepr201
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Boris",
+           family = "Demeshev",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "boris.demeshev@gmail.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Depends: R (>= 3.1.0)
 Imports: 
     dplyr,
     rio,

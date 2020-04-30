@@ -24,6 +24,7 @@ get_students_data = function(path) {
 #' @export
 get_gh_repos = function(path = ".") {
   commits = tibble::tibble(folder = list.dirs(path, recursive = FALSE))
+  commits = dplyr::mutate(commits, user = stringr::str_match(folder, "/([A-Za-z0-9_-]*)$")[, 2])
   commits = dplyr::mutate(commits, gh_commits = purrr::map(folder, ~get_gh_commits(.)))
   commits = tidyr::unnest(commits, gh_commits)
   return(commits)
@@ -48,7 +49,7 @@ get_gh_commits = function(path = ".") {
   history_logs = system(log_cmd, intern = TRUE) %>%
     stringr::str_split_fixed("\t", 7) %>%
     dplyr::as_tibble(.name_repair = "minimal") %>%
-    stats::setNames(c("date", "committer", "mail", "message", "user", "hash", "parent_hash"))
+    stats::setNames(c("date", "committer", "mail", "message", "username", "hash", "parent_hash"))
   return(history_logs)
 }
 
@@ -228,4 +229,50 @@ get_lms_prefix = function(last_name, first_name) {
   return(prefix)
 }
 
+
+#' List files in a folder
+#'
+#' List files in a folder
+#'
+#' List files in a folder
+#' @param path folder name
+#' @param remove file names to exclude
+#' @return character vector with a list of files separated by comma
+#' @export
+#' @example
+#' list_files()
+list_files = function(path = ".", remove = c("LICENSE", "README.md")) {
+  files = list.files(path)
+  files = files[!(files %in% remove)]
+  files = paste0(files, collapse = ", ")
+  return(files)
+}
+
+
+#' Recognise student id using folder content
+#'
+#' Recognise student id using folder content
+#'
+#' Recognise student id using folder content.
+#' The function searches for the files like krx_xxx.pdf or something close to this.
+#' @param path folder name
+#' @return student integer id or NA
+#' @export
+get_stud_id_from_repository = function(path = ".") {
+  files = tibble::tibble(filename = list.files(path))
+  files = dplyr::filter(files, !(filename %in% c("LICENSE", "README.md")))
+  files = dplyr::mutate(files, filename = stringr::str_to_lower(filename))
+
+  files = dplyr::mutate(files, id_str = stringr::str_match(filename, "kr[-_ ]*[0-9][- _]([0-9]*).pdf")[, 2])
+  files = dplyr::mutate(files, id_candidate = as.integer(id_str))
+
+  candidates = stats::na.omit(unique(files$id_candidate))
+
+  if (length(candidates) == 1) {
+    return(candidates)
+  } else {
+    warning("Multiple or no candidates!!!!\n Folder: ", path, "\n Files: ", files$filename)
+    return(NA_integer_)
+  }
+}
 
