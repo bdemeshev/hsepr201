@@ -27,6 +27,8 @@ get_gh_repos = function(path = ".") {
   commits = dplyr::mutate(commits, user = stringr::str_match(folder, "/([A-Za-z0-9_-]*)$")[, 2])
   commits = dplyr::mutate(commits, gh_commits = purrr::map(folder, ~get_gh_commits(.)))
   commits = tidyr::unnest(commits, gh_commits)
+  commits = dplyr::mutate(commits,
+      date = lubridate::parse_date_time(date, "Ymd HMS z", tz = "Europe/Moscow"))
   return(commits)
 }
 
